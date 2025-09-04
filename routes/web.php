@@ -50,13 +50,22 @@ Route::middleware('auth')->group(function () {
     
     // Cashier Routes
     Route::middleware('role:cashier')->prefix('cashier')->name('cashier.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', function () {
+            return view('cashier.dashboard');
+        })->name('dashboard');
+
         // POS Interface
         Route::get('/pos', [PosController::class, 'index'])->name('pos');
         Route::post('/pos/process-order', [PosController::class, 'processOrder'])->name('pos.process-order');
         Route::get('/pos/product/{id}', [PosController::class, 'getProduct'])->name('pos.get-product');
         
         // Order Management for Cashier
-        Route::resource('/orders', CashierOrderController::class);
+    Route::resource('/orders', CashierOrderController::class);
+    // Custom receipt print route for cashier orders
+    Route::get('/orders/{order}/receipt', [CashierOrderController::class, 'printReceipt'])->name('orders.receipt');
+    // PDF download for receipt (uses barryvdh/laravel-dompdf if available)
+    Route::get('/orders/{order}/receipt/pdf', [CashierOrderController::class, 'downloadPdf'])->name('orders.pdf');
     });
     
     // Manager Routes
