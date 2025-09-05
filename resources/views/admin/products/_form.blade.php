@@ -9,7 +9,14 @@
     </div>
     <div class="col-md-6">
         <label for="barcode" class="form-label">Barcode</label>
-        <input type="text" id="barcode" name="barcode" class="form-control" value="{{ old('barcode', $product->barcode ?? '') }}">
+        <div class="input-group">
+            <input type="text" id="barcode" name="barcode" class="form-control" value="{{ old('barcode', $product->barcode ?? '') }}" readonly>
+            <button type="button" id="generate-barcode" class="btn btn-outline-secondary">Generate</button>
+        </div>
+        <div class="mt-2">
+            <svg id="barcode-preview" aria-hidden="true"></svg>
+        </div>
+    <small class="text-muted">Barcode diisi otomatis (PRD-xxxxxxxxxx). Gunakan tombol Generate untuk membuat ulang.</small>
     </div>
     <div class="col-md-6">
         <label for="category_id" class="form-label">Kategori</label>

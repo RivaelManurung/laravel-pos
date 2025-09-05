@@ -27,6 +27,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
         
         // User Management
         Route::resource('/users', UserController::class);
@@ -76,15 +77,26 @@ Route::middleware('auth')->group(function () {
         // Reports
         Route::get('/reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
         Route::get('/reports/inventory', [ReportController::class, 'inventoryReport'])->name('reports.inventory');
+    // Manager product views (read-only)
+    Route::get('/products', [\App\Http\Controllers\Manager\ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/{product}', [\App\Http\Controllers\Manager\ProductController::class, 'show'])->name('products.show');
+    Route::get('/products-export', [\App\Http\Controllers\Manager\ProductController::class, 'export'])->name('products.export');
     });
     
     // Common Routes (bisa diakses oleh semua role yang terautentikasi)
-    Route::get('/profile', function () {
-        return view('profile');
-    })->name('profile');
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
 });
 
 // Fallback Route
 Route::fallback(function () {
     return redirect()->route('login');
 });
+
+// Midtrans webhook (public) - exclude CSRF and role middleware so external webhook can call it
+Route::post('/midtrans/notify', [\App\Http\Controllers\Cashier\PosController::class, 'midtransNotify'])
+    ->name('midtrans.notify')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class, \App\Http\Middleware\CheckRole::class]);
+
+
+    

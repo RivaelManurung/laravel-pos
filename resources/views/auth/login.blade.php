@@ -74,18 +74,34 @@
 
 <body>
     <div class="container-xxl">
+
         <div class="authentication-wrapper authentication-basic container-p-y">
-            @if(session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-            @elseif(session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
-                @endif
-                <div class="authentication-inner">
+            <div class="authentication-inner">
                     <div class="card login-card">
                         <div class="card-body">
+                            {{-- Alerts inside the login box --}}
+                            @if(session('success'))
+                                <div class="alert alert-success mb-3">
+                                    {{ session('success') }}
+                                </div>
+                            @endif
+
+                            @if(session('error'))
+                                <div class="alert alert-danger mb-3">
+                                    {{ session('error') }}
+                                </div>
+                            @endif
+
+                            @if($errors->any())
+                                <div class="alert alert-danger mb-3">
+                                    <ul class="mb-0">
+                                        @foreach($errors->all() as $err)
+                                            <li>{{ $err }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
                             {{-- Logo dan Brand --}}
                             <div class="app-brand justify-content-center mb-4 text-center">
                                 <a href="{{ url('/') }}"
@@ -206,16 +222,7 @@
                 });
             }
         });
-        </script>
-</body>
-
-</html>type = 'password';
-icon.classList.replace('bx-show', 'bx-hide');
-}
-});
-}
-});
-</script>
+    </script>
 </body>
 
 </html>

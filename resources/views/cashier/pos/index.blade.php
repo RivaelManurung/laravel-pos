@@ -78,6 +78,14 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
+    <!-- Global processing overlay (shows during network/payment processing) -->
+    <div id="processing-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:2000; align-items:center; justify-content:center;">
+        <div class="text-center text-white">
+            <div class="spinner-border text-light" role="status" style="width:3rem;height:3rem;"></div>
+            <div class="mt-2">Memproses...</div>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-8">
             <div class="card">
@@ -277,6 +285,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     (function(){
         const cart = {};
@@ -351,7 +360,7 @@
                         playSound('success');
                     } else {
                         playSound('error');
-                        alert('Produk dengan barcode "' + barcode + '" tidak ditemukan');
+                        Swal.fire({ icon: 'warning', title: 'Produk tidak ditemukan', text: 'Produk dengan barcode "' + barcode + '" tidak ditemukan' });
                     }
                 }
             }
@@ -377,7 +386,10 @@
         });
 
         // Product click to add to cart
+        // Make product cards keyboard accessible and clickable
         document.querySelectorAll('.pos-product-card').forEach(card => {
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
             card.addEventListener('click', function() {
                 if (!this.classList.contains('out-of-stock')) {
                     const id = this.dataset.id;
@@ -387,12 +399,18 @@
                     addToCart(id, name, price, stock);
                 }
             });
+            card.addEventListener('keydown', function(e){
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
         });
 
-        function addToCart(id, name, price, stock) {
+    function addToCart(id, name, price, stock) {
             if (stock <= 0) {
                 playSound('error');
-                alert('Stok produk habis');
+                Swal.fire({ icon: 'error', title: 'Stok Habis', text: 'Stok produk habis' });
                 return;
             }
             
@@ -402,7 +420,7 @@
                     playSound('success');
                 } else {
                     playSound('error');
-                    alert('Stok tidak mencukupi');
+                    Swal.fire({ icon: 'error', title: 'Stok tidak mencukupi', text: 'Stok tidak mencukupi' });
                 }
             } else {
                 cart[id] = { name: name, price: price, qty: 1, stock: stock };
@@ -555,7 +573,7 @@
                         renderCart();
                     } else {
                         playSound('error');
-                        alert('Stok tidak mencukupi');
+                        Swal.fire({ icon: 'error', title: 'Stok tidak mencukupi', text: 'Stok tidak mencukupi' });
                     }
                 });
             });
@@ -569,7 +587,7 @@
                     if(v < 1) v = 1;
                     if(v > stock) {
                         playSound('error');
-                        alert('Melebihi stok tersedia');
+                        Swal.fire({ icon: 'error', title: 'Melebihi stok', text: 'Melebihi stok tersedia' });
                         v = stock;
                     }
                     cart[id].qty = v;
@@ -578,11 +596,21 @@
             });
         }
 
-        // Clear cart
-        function clearCart() {
-            if (Object.keys(cart).length > 0 && confirm('Hapus semua item dari keranjang?')) {
-                Object.keys(cart).forEach(id => delete cart[id]);
-                renderCart();
+        // Clear cart (uses SweetAlert confirmation)
+        async function clearCart() {
+            if (Object.keys(cart).length > 0) {
+                const res = await Swal.fire({
+                    title: 'Hapus semua item?',
+                    text: 'Hapus semua item dari keranjang?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, hapus',
+                    cancelButtonText: 'Batal'
+                });
+                if (res.isConfirmed) {
+                    Object.keys(cart).forEach(id => delete cart[id]);
+                    renderCart();
+                }
             }
         }
 
@@ -670,7 +698,7 @@
         document.getElementById('submit-order').addEventListener('click', function(){
             const items = Object.keys(cart).map(id => ({ product_id: id, quantity: cart[id].qty }));
             if(items.length === 0) { 
-                alert('Keranjang kosong'); 
+                Swal.fire({ icon: 'info', title: 'Keranjang kosong', text: 'Silakan tambahkan item terlebih dahulu' });
                 return; 
             }
 
@@ -678,7 +706,7 @@
             for(const id of Object.keys(cart)){
                 const stock = cart[id].stock;
                 if(cart[id].qty > stock) { 
-                    alert(`Stok ${cart[id].name} tidak mencukupi.`); 
+                    Swal.fire({ icon: 'error', title: 'Stok tidak mencukupi', text: `Stok ${cart[id].name} tidak mencukupi.` });
                     return; 
                 }
             }
@@ -686,11 +714,11 @@
             const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
             
             // For cash payment, validate payment amount
-            if (paymentMethod === 'cash') {
+                if (paymentMethod === 'cash') {
                 const total = Object.keys(cart).reduce((sum, id) => sum + (cart[id].price * cart[id].qty), 0);
                 const paymentAmount = parseFloat(document.getElementById('payment-amount').value) || 0;
                 if (paymentAmount < total) {
-                    alert('Jumlah pembayaran kurang dari total belanja');
+                    Swal.fire({ icon: 'error', title: 'Pembayaran kurang', text: 'Jumlah pembayaran kurang dari total belanja' });
                     return;
                 }
             }
@@ -704,6 +732,8 @@
 
             this.disabled = true;
             this.innerHTML = '<i class="bx bx-loader-alt bx-spin me-2"></i>Memproses...';
+            // show processing overlay
+            document.getElementById('processing-overlay').style.display = 'flex';
             
             fetch('{{ route('cashier.pos.process-order') }}', {
                 method: 'POST',
@@ -717,20 +747,73 @@
                 if(r.ok && data.success){
                     playSound('success');
                     // Clear cart and redirect
-                    Object.keys(cart).forEach(id => delete cart[id]);
-                    renderCart();
-                    window.location.href = '/cashier/orders/' + data.order_id;
+                    // If server returned snap_token, open Midtrans Snap
+                    if (data.snap_token) {
+                        // Ensure Snap script is loaded
+                        if (typeof window.snap === 'undefined') {
+                            // Load sandbox snap script dynamically
+                            const s = document.createElement('script');
+                            s.src = '{{ config("midtrans.production") ? "https://app.midtrans.com/snap/snap.js" : "https://app.sandbox.midtrans.com/snap/snap.js" }}';
+                            s.setAttribute('data-client-key', data.client_key || '{{ config("midtrans.client_key") }}');
+                            // avoid adding the script multiple times
+                            if (!document.getElementById('midtrans-snap-js')) {
+                                s.id = 'midtrans-snap-js';
+                                document.head.appendChild(s);
+                            }
+                            const doPay = () => window.snap.pay(data.snap_token, {
+                                    onSuccess: function(result){
+                                        Object.keys(cart).forEach(id => delete cart[id]);
+                                        renderCart();
+                                        window.location.href = '/cashier/orders/' + data.order_id;
+                                    },
+                                    onPending: function(result){
+                                        Swal.fire({ icon: 'info', title: 'Pembayaran pending', text: 'Pembayaran sedang menunggu konfirmasi' });
+                                        window.location.href = '/cashier/orders/' + data.order_id;
+                                    },
+                                    onError: function(result){
+                                        Swal.fire({ icon: 'error', title: 'Pembayaran gagal', text: 'Terjadi kesalahan pada proses pembayaran' });
+                                    }
+                                });
+                            
+                            if (typeof window.snap === 'undefined') {
+                                s.onload = doPay;
+                            } else {
+                                doPay();
+                            }
+                        } else {
+                            window.snap.pay(data.snap_token, {
+                                onSuccess: function(result){
+                                    Object.keys(cart).forEach(id => delete cart[id]);
+                                    renderCart();
+                                    window.location.href = '/cashier/orders/' + data.order_id;
+                                },
+                                onPending: function(result){
+                                    Swal.fire({ icon: 'info', title: 'Pembayaran pending', text: 'Pembayaran sedang menunggu konfirmasi' });
+                                    window.location.href = '/cashier/orders/' + data.order_id;
+                                },
+                                onError: function(result){
+                                    Swal.fire({ icon: 'error', title: 'Pembayaran gagal', text: 'Terjadi kesalahan pada proses pembayaran' });
+                                }
+                            });
+                        }
+                    } else {
+                        Object.keys(cart).forEach(id => delete cart[id]);
+                        renderCart();
+                        window.location.href = '/cashier/orders/' + data.order_id;
+                    }
                 } else {
                     playSound('error');
-                    alert(data.message || 'Gagal memproses order');
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Gagal memproses order' });
                 }
             }).catch(err => {
                 console.error(err);
                 playSound('error');
-                alert('Terjadi kesalahan saat memproses order');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi kesalahan saat memproses order' });
             }).finally(() => { 
                 this.disabled = false; 
                 this.innerHTML = '<i class="bx bx-check-circle me-2"></i>Proses Order <span class="pos-shortcut">(F9)</span>';
+                // hide processing overlay
+                document.getElementById('processing-overlay').style.display = 'none';
             });
         });
 
@@ -740,3 +823,4 @@
     })();
 </script>
 @endpush
+

@@ -16,7 +16,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'is_active'
+        'is_active',
+        'avatar'
     ];
 
     protected $hidden = [
@@ -29,6 +30,25 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean'
     ];
+
+    /**
+     * Append computed attributes to model JSON
+     */
+    protected $appends = [
+        'avatar_url'
+    ];
+
+    /**
+     * Return full URL to avatar or default image.
+     */
+    public function getAvatarUrlAttribute()
+    {
+        if ($this->avatar) {
+            return asset('storage/' . $this->avatar);
+        }
+
+        return asset('assets/img/avatars/default-user.png');
+    }
 
     // Role constants
     const ROLE_ADMIN = 'admin';

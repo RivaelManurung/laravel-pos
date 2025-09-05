@@ -59,10 +59,12 @@
                             <li class="nav-item navbar-dropdown dropdown-user dropdown">
                                 <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
                                     data-bs-toggle="dropdown">
-                                    {{-- PERBAIKAN: Avatar gambar diganti dengan ikon --}}
                                     <div class="avatar avatar-online">
-                                        <span class="avatar-initial rounded-circle bg-primary"><i
-                                                class="bx bx-user"></i></span>
+                                        @if(Auth::check() && Auth::user()->avatar)
+                                            <img src="{{ asset('storage/' . Auth::user()->avatar) }}" alt="Avatar" class="rounded-circle" style="width:36px;height:36px;object-fit:cover;">
+                                        @else
+                                            <span class="avatar-initial rounded-circle bg-primary"><i class="bx bx-user"></i></span>
+                                        @endif
                                     </div>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
@@ -87,7 +89,12 @@
                                     <li>
                                         <div class="dropdown-divider"></div>
                                     </li>
-                                    {{-- PERBAIKAN: Menu "My Profile" dihapus --}}
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('profile') }}">
+                                            <i class="bx bx-user me-2"></i>
+                                            <span class="align-middle">Profil Saya</span>
+                                        </a>
+                                    </li>
                                     <li>
                                         {{-- Form Logout yang aman --}}
                                         <form action="{{ route('logout') }}" method="POST" id="logout-form">
@@ -105,6 +112,7 @@
                     </div>
                 </nav>
                 <div class="content-wrapper">
+                    @include('layout._alerts')
                     @yield('content')
 
                     @include('layout.footer')

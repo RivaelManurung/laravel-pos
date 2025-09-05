@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -25,25 +26,48 @@ class LoginController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !$user->is_active) {
-            throw ValidationException::withMessages([
-                'email' => 'Akun tidak aktif atau tidak ditemukan'
-            ]);
-        }
-
-        if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            // Log failed attempt
-            Log::warning('login_failed', [
-                'user_id' => $user?->id,
+        // Email not registered
+        if (!$user) {
+            Log::warning('login_failed_email_not_found', [
                 'email' => $request->email,
                 'ip' => $request->ip(),
                 'agent' => $request->userAgent(),
             ]);
 
             throw ValidationException::withMessages([
-                'email' => 'Email atau password salah'
+                'email' => 'Email tidak terdaftar'
             ]);
         }
+
+        // Account inactive
+        if (!$user->is_active) {
+            Log::warning('login_failed_inactive', [
+                'user_id' => $user->id,
+                'email' => $request->email,
+                'ip' => $request->ip(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda tidak aktif. Hubungi administrator.'
+            ]);
+        }
+
+        // Wrong password
+        if (!Hash::check($request->password, $user->password)) {
+            Log::warning('login_failed_wrong_password', [
+                'user_id' => $user->id,
+                'email' => $request->email,
+                'ip' => $request->ip(),
+                'agent' => $request->userAgent(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'password' => 'Password salah'
+            ]);
+        }
+
+        // Credentials ok -> login
+        Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
 

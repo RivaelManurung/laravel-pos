@@ -9,7 +9,13 @@
     </div>
     <div class="col-md-6">
         <label for="edit-barcode" class="form-label">Barcode</label>
-        <input type="text" id="edit-barcode" name="barcode" class="form-control" value="">
+        <div class="input-group">
+            <input type="text" id="edit-barcode" name="barcode" class="form-control" value="" readonly>
+        </div>
+        <div class="mt-2">
+            <svg id="edit-barcode-preview" aria-hidden="true"></svg>
+        </div>
+    <small class="text-muted">Barcode tidak dapat diubah.</small>
     </div>
     <div class="col-md-6">
         <label for="edit-category_id" class="form-label">Kategori</label>

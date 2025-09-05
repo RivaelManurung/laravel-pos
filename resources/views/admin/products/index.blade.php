@@ -151,4 +151,89 @@
         });
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Helper: generate PRD-<10digit> code
+        function generatePrdCode() {
+            const num = Math.floor(1000000000 + Math.random() * 9000000000); // 10 digits
+            return 'PRD-' + num;
+        }
+
+        // Create modal: auto-generate and preview
+        const createModal = document.getElementById('createProductModal');
+        if (createModal) {
+            // When the modal is shown, ensure barcode is generated if empty
+            createModal.addEventListener('show.bs.modal', function () {
+                const input = document.getElementById('barcode');
+                if (input && !input.value) {
+                    input.value = generatePrdCode();
+                    JsBarcode('#barcode-preview', input.value, {format: 'CODE128', displayValue: true, height:40});
+                }
+            });
+
+            // When the modal is hidden, reset the form so previous values don't persist
+            createModal.addEventListener('hidden.bs.modal', function () {
+                const form = createModal.querySelector('form');
+                if (form) {
+                    form.reset();
+                }
+
+                // Clear barcode SVG preview
+                const svg = document.getElementById('barcode-preview');
+                if (svg) {
+                    // JsBarcode renders into the svg element; clearing innerHTML removes the graphic
+                    svg.innerHTML = '';
+                }
+
+                // Ensure is_active checkbox defaults to checked for new products
+                const isActive = document.getElementById('is_active');
+                if (isActive) {
+                    isActive.checked = true;
+                }
+
+                // If there's an image preview element in the create modal, hide/clear it
+                const imagePreview = document.getElementById('create-image-preview');
+                if (imagePreview) {
+                    imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                }
+            });
+        }
+
+        // Create: generate button + live preview
+        const genBtn = document.getElementById('generate-barcode');
+        if (genBtn) {
+            genBtn.addEventListener('click', function () {
+                const input = document.getElementById('barcode');
+                if (input) {
+                    input.value = generatePrdCode();
+                    JsBarcode('#barcode-preview', input.value, {format: 'CODE128', displayValue: true, height:40});
+                }
+            });
+
+            const inputCreate = document.getElementById('barcode');
+            if (inputCreate) inputCreate.addEventListener('input', () => {
+                if (inputCreate.value) JsBarcode('#barcode-preview', inputCreate.value, {format:'CODE128', displayValue:true, height:40});
+            });
+        }
+
+    // Edit modal: only render existing barcode preview on open. Generating new barcode in edit mode is disabled.
+
+        // When opening edit modal, render barcode preview if value exists
+        const editModal = document.getElementById('editProductModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                setTimeout(() => {
+                    const code = button.dataset.barcode || document.getElementById('edit-barcode').value;
+                    if (code) {
+                        const svg = document.getElementById('edit-barcode-preview');
+                        if (svg) JsBarcode(svg, code, {format:'CODE128', displayValue:true, height:40});
+                    }
+                }, 120);
+            });
+        }
+    });
+</script>
 @endpush

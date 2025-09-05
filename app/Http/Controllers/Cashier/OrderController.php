@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
@@ -54,9 +55,8 @@ class OrderController extends Controller
 
         $order->load(['customer', 'items.product', 'user']);
 
-        // Prefer barryvdh/laravel-dompdf if installed
-        if (class_exists(\Barryvdh\DomPDF\Facade::class)) {
-            $pdf = \Barryvdh\DomPDF\Facade::loadView('cashier.orders.receipt_pdf', compact('order'));
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            $pdf = Pdf::loadView('cashier.orders.receipt_pdf', compact('order'));
             $filename = 'receipt-' . $order->id . '.pdf';
             return $pdf->download($filename);
         }

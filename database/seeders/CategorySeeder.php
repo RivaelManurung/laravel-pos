@@ -9,7 +9,10 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
+        // Disable foreign key checks to allow truncate when referenced
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Category::truncate();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $categories = [
             ['name' => 'Elektronik', 'description' => 'Produk elektronik'],

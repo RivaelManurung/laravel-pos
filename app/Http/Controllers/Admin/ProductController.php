@@ -34,7 +34,6 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'sku' => 'nullable|string|unique:products,sku',
-            'barcode' => 'nullable|string|unique:products,barcode',
             'category_id' => 'required|exists:categories,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean'
@@ -42,6 +41,17 @@ class ProductController extends Controller
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        // Server-side barcode generation: ensure PRD-<10digits> and uniqueness
+        if (empty($validated['barcode'])) {
+            $validated['barcode'] = $this->generateUniqueBarcode();
+        } else {
+            // Ignore client-provided barcode and still ensure uniqueness
+            // to prevent tampering; generate new one if collision
+            if (Product::where('barcode', $validated['barcode'])->exists()) {
+                $validated['barcode'] = $this->generateUniqueBarcode();
+            }
         }
 
         $validated['is_active'] = $request->has('is_active');
@@ -61,7 +71,6 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:0',
             'min_stock' => 'nullable|integer|min:0',
             'sku' => 'nullable|string|unique:products,sku,' . $product->id,
-            'barcode' => 'nullable|string|unique:products,barcode,' . $product->id,
             'category_id' => 'required|exists:categories,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'is_active' => 'boolean'
@@ -74,8 +83,11 @@ class ProductController extends Controller
             $validated['image'] = $request->file('image')->store('products', 'public');
         }
 
-        $validated['is_active'] = $request->has('is_active');
-        $product->update($validated);
+    // Do not allow updating barcode from client-side. Keep existing barcode.
+    unset($validated['barcode']);
+
+    $validated['is_active'] = $request->has('is_active');
+    $product->update($validated);
 
         return redirect()->route('admin.products.index')->with('success', 'Produk berhasil diperbarui.');
     }
@@ -89,5 +101,18 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->back()->with('success', 'Produk berhasil dihapus.');
+    }
+
+    /**
+     * Generate a unique PRD-<10digit> barcode.
+     */
+    protected function generateUniqueBarcode()
+    {
+        do {
+            $num = mt_rand(1000000000, 9999999999); // 10 digits
+            $code = 'PRD-' . $num;
+        } while (Product::where('barcode', $code)->exists());
+
+        return $code;
     }
 }
